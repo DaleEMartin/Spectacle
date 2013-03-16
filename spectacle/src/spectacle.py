@@ -42,6 +42,17 @@ class Collection(object):
   
     def prev(self):
         raise NotImplementedError( "Collection.prev() is not implemented" )      
+
+class SlideShowListener(object):        
+    """This abstract class is responsible for defining the interface of a SlideShowListener."""
+    def __init__(self):
+        pass
+        
+    def current(self):
+        raise NotImplementedError( "SlideShowListener.current() not implemented" )
+    
+    def setCurrent(self, newCurrent):
+        raise NotImplementedError( "SlideShowListener.setCurrent() not implemented" )
         
 class SlideShowModel(object):
     def __init__(self, aCollection):

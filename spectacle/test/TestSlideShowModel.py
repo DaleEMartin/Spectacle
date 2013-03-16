@@ -35,12 +35,27 @@ class TestCollection(spectacle.Collection):
             self.myIndex = self.index() - 1
         return self.get(self.index())
 
+class TestListener(spectacle.SlideShowListener):
+    def __init__(self):
+        self.myCurrent = ""
+        
+    def current(self):
+        return self.myCurrent;
+    
+    def setCurrent(self, newCurrent):
+        self.myCurrent = newCurrent;
+
 class SlideShowTestCase(unittest.TestCase):
 
     def setUp(self):
         collection = TestCollection()
         model = spectacle.SlideShowModel(collection)
+        self.myListener = TestListener()
+        model.addListener(self.myListener)
         self.myModel = model        
+
+    def listener(self):
+        return self.myListener;
 
     def slideShowModel(self):
         return self.myModel
@@ -51,8 +66,11 @@ class SlideShowTestCase(unittest.TestCase):
     def testNext(self):
         """testSetDir. note that all test method names must begin with 'test.'"""
         self.assertEqual(self.slideShowModel().next(), "1")
+        self.assertEqual(self.listener().current(), "1")
         self.assertEqual(self.slideShowModel().next(), "2")
+        self.assertEqual(self.listener().current(), "2")
         self.assertEqual(self.slideShowModel().next(), "3")
+        self.assertEqual(self.listener().current(), "3")
         # Asking for the next should raise a StopIteration exception
         self.assertRaises(StopIteration, self.slideShowModel().next)
 
@@ -60,6 +78,4 @@ class SlideShowTestCase(unittest.TestCase):
         self.slideShowModel().next() # "1"
         self.slideShowModel().next() # "2"
         self.assertEqual(self.slideShowModel().prev(), "1")
-
-
-        
+        self.assertEqual(self.listener().current(), "1")
