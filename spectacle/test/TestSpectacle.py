@@ -1,11 +1,11 @@
 import unittest
-import spectacle
+from spectacle.interfaces import Spectacle
 
 class SimpleTestCase(unittest.TestCase):
 
     def setUp(self):
         """Call before every test case."""
-        self.spectacle = spectacle.Spectacle()
+        self.spectacle = Spectacle()
 #        self.foo = Foo()
 #        self.file = open( "blah", "r" )
 

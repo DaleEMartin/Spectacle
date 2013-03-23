@@ -1,7 +1,9 @@
 import unittest
-import spectacle
+from spectacle.interfaces import Collection
+from spectacle.interfaces import SlideShowListener
+from spectacle.interfaces import SlideShowModel
 
-class TestCollection(spectacle.Collection):
+class TestCollection(Collection):
     def __init__(self):
         self.myPics = list()
         self.pics().append("1")
@@ -35,7 +37,7 @@ class TestCollection(spectacle.Collection):
             self.myIndex = self.index() - 1
         return self.get(self.index())
 
-class TestListener(spectacle.SlideShowListener):
+class TestListener(SlideShowListener):
     def __init__(self):
         self.myCurrent = ""
         
@@ -49,7 +51,7 @@ class SlideShowTestCase(unittest.TestCase):
 
     def setUp(self):
         collection = TestCollection()
-        model = spectacle.SlideShowModel(collection)
+        model = SlideShowModel(collection)
         self.myListener = TestListener()
         model.addListener(self.myListener)
         self.myModel = model        

@@ -1,3 +1,6 @@
+import Image
+
+
 class Spectacle(object):
 #    def __init__(self, initial_balance=0):
 #        self.balance = initial_balance
@@ -80,4 +83,17 @@ class SlideShowModel(object):
     
     def current(self):
         return self.myCurrent
+    
+
+class DisplayListener(SlideShowListener):
+    """This abstract class is responsible for defining the interface of a SlideShowListener."""
+    def __init__(self):
+        self.myCurrent = ""
+        
+    def current(self):
+        return self.myCurrent
+    
+    def setCurrent(self, newCurrent):
+        image = Image.open(newCurrent)
+        image.show()
     
