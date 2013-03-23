@@ -1,5 +1,5 @@
 import unittest
-from spectacle.interfaces import DisplayListener
+from spectacle.main import DisplayListener
 
 class TestCollection(unittest.TestCase):
     def setUp(self):

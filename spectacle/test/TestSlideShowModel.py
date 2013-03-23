@@ -1,7 +1,7 @@
 import unittest
 from spectacle.interfaces import Collection
 from spectacle.interfaces import SlideShowListener
-from spectacle.interfaces import SlideShowModel
+from spectacle.main import SlideShowModel
 
 class TestCollection(Collection):
     def __init__(self):

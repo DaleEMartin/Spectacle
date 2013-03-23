@@ -1,5 +1,5 @@
 import unittest
-from spectacle.interfaces import Spectacle
+from spectacle.main import Spectacle
 
 class SimpleTestCase(unittest.TestCase):
 
