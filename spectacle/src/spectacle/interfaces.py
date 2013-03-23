@@ -1,3 +1,10 @@
+# Copyright 2013, Dale E. Martin <dale@the-martins.org>
+#
+# All Rights Reserved
+#
+# See the file COPYRIGHT for information on your rights and responsibilities if you
+# redistribute this software.
+
 class SelectionPolicy(object):
     """This abstract class is responsible for defining the policy of the slide show.
     A simple policy, for example, could pick the next picture in a Collection."""

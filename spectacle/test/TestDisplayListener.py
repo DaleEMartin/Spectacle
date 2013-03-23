@@ -1,3 +1,10 @@
+# Copyright 2013, Dale E. Martin <dale@the-martins.org>
+#
+# All Rights Reserved
+#
+# See the file COPYRIGHT for information on your rights and responsibilities if you
+# redistribute this software.
+
 import unittest
 from spectacle.main import DisplayListener
 
