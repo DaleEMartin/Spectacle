@@ -15,8 +15,8 @@ import time
 from spectacle.interfaces import SlideShowListener
 from spectacle.interfaces import Collection
 
-screenWidth = 1024
-screenHeight = 768
+screenWidth = 1280
+screenHeight = 1024
 
 class PictureDB(object):
     def __init__(self, dbDir, verbose):
@@ -106,23 +106,33 @@ class Spectacle(object):
         self.mySlideshowModel = SlideShowModel(self.myCollection)
         self.mySlideshowModel.addListener(DisplayListener())
         # self.myCollection = SimpleCollection(collectionConfig()) 
+        self.mySlideshowModel.next()
         pygame.time.set_timer(pygame.USEREVENT + 1, 5000)
         i = 0;
         while True:
-            for event in pygame.event.get():
-                if (event.type == pygame.QUIT):
-                    print "pygame.QUIT"
-                    sys.exit()
-                elif (event.type == pygame.KEYDOWN):
-                    print "pygame.KEYDOWN"
-                    sys.exit()
-                elif (i == 4):
-                    print "i == 4"
-                    sys.exit()
-
+            event = pygame.event.wait()
+            if (event.type == pygame.USEREVENT + 1):
+                print "pygame.USEREVENT"
                 self.mySlideshowModel.next()
-                i = i + 1
-                pygame.time.wait(100)
+                # If we took so long another USEREVENT posted
+                # we're going to clear it so that quit events
+                # can make it through
+                pygame.event.clear(pygame.USEREVENT + 1)
+            elif (event.type == pygame.QUIT):
+                print "pygame.QUIT"
+                pygame.quit()
+                sys.exit()
+            elif (event.type == pygame.KEYDOWN):
+                print "pygame.KEYDOWN"
+                pygame.quit()
+                sys.exit()
+            elif (i == 10):
+                print "i == 10"
+                pygame.quit()
+                sys.exit()
+
+            # i = i + 1
+            # pygame.time.wait(100)
         
     def directory(self):
         return self.dir  
@@ -160,7 +170,9 @@ class SlideShowModel(object):
 class DisplayListener(SlideShowListener):
     """This abstract class is responsible for defining the interface of a SlideShowListener."""
     def __init__(self):
+        pygame.init()
         self.myDisplay = pygame.display.set_mode((screenWidth, screenHeight), pygame.FULLSCREEN)
+        pygame.mouse.set_visible(0)
         self.myCurrent = ""
         
     def current(self):
@@ -176,14 +188,21 @@ class DisplayListener(SlideShowListener):
 
         width, height = pilConverted.size
         ratio = min(screenWidth/float(width), screenHeight/float(height))
+	print "ratio: " + str(ratio)
         newWidth = int(ratio * width)
         newHeight = int(ratio * height)
-        pilConverted.thumbnail([newWidth, newHeight], Image.ANTIALIAS)
+	print "newWidth: " + str(newWidth)
+	print "newHeight: " + str(newHeight)
+        pilConverted = pilConverted.resize([newWidth, newHeight], Image.ANTIALIAS)
+	extraHeight = screenHeight - newHeight;
+	extraWidth  = screenWidth - newWidth;
 
         pilString = pilConverted.tostring()
         pygameImage = pygame.image.fromstring(pilString,
                                               pilConverted.size,
                                               'RGB')
-        pygameImage = pygame.transform.scale(pygameImage,(width,height))
-        self.myDisplay.blit(pygameImage, (0, 0))
+        # pygameImage = pygame.transform.scale(pygameImage,(width,height))
+	self.myDisplay.fill((0, 0, 0))
+        self.myDisplay.blit(pygameImage, (extraWidth/2, extraHeight/2))
+
         pygame.display.update()
