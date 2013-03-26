@@ -6,12 +6,13 @@
 # redistribute this software.
 
 import unittest
+import time
 from spectacle.main import DisplayListener
 
 class TestCollection(unittest.TestCase):
     def setUp(self):
         """Call before every test case."""
-        self.myDisplayListener = DisplayListener()
+        self.myDisplayListener = DisplayListener(True) # Verbose
 
     def tearDown(self):
         """Call after every test case."""
@@ -19,4 +20,5 @@ class TestCollection(unittest.TestCase):
 
     def testSetCurrent(self):
         """testSetDir. note that all test method names must begin with 'test.'"""
-        self.myDisplayListener.setCurrent('/tmp/test.jpg')
+        self.myDisplayListener.setCurrent('pics1/air.jpg')
+        time.sleep(2)

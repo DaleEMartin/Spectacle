@@ -10,13 +10,10 @@ import os
 import pygame
 import sqlite3 as lite
 import sys
-import time
+# import time
 
 from spectacle.interfaces import SlideShowListener
 from spectacle.interfaces import Collection
-
-screenWidth = 1280
-screenHeight = 1024
 
 class PictureDB(object):
     def __init__(self, dbDir, verbose):
@@ -82,11 +79,11 @@ class DefaultCollection(Collection):
         else:
             self.myIdx = 0
 
-        next = self.pictureList[self.myIdx]
+        nextPic = self.pictureList[self.myIdx]
         if self.verbose():
-            print "next: " + next
+            print "nextPic: " + nextPic
 
-        return next
+        return nextPic
 
 class Spectacle(object):
     def __init__(self, verbose, config):
@@ -169,11 +166,21 @@ class SlideShowModel(object):
 
 class DisplayListener(SlideShowListener):
     """This abstract class is responsible for defining the interface of a SlideShowListener."""
-    def __init__(self):
-        pygame.init()
-        self.myDisplay = pygame.display.set_mode((screenWidth, screenHeight), pygame.FULLSCREEN)
-        pygame.mouse.set_visible(0)
+    def __init__(self, verbose):
+        self.initDisplay()
         self.myCurrent = ""
+        self.myVerbose = verbose
+        
+    def verbose(self):
+        return self.myVerbose;
+        
+    def initDisplay(self):
+        pygame.init()
+        displayInfo = pygame.display.Info();
+        self.screenWidth = displayInfo.current_w;
+        self.screenHeight = displayInfo.current_h;
+        self.myDisplay = pygame.display.set_mode((self.screenWidth, self.screenHeight), pygame.FULLSCREEN)
+        pygame.mouse.set_visible(0)        
         
     def current(self):
         return self.myCurrent
@@ -181,28 +188,39 @@ class DisplayListener(SlideShowListener):
     def setCurrent(self, newCurrent):
         self.myCurrent = newCurrent
         self.display(newCurrent)
-        
-    def display(self,image):
+
+    def prepareImage(self, image):
         pilImage = Image.open(image)
         pilConverted = pilImage.convert('RGB')
 
         width, height = pilConverted.size
-        ratio = min(screenWidth/float(width), screenHeight/float(height))
-	print "ratio: " + str(ratio)
+        ratio = min(self.screenWidth/float(width), self.screenHeight/float(height))
+        
         newWidth = int(ratio * width)
         newHeight = int(ratio * height)
-	print "newWidth: " + str(newWidth)
-	print "newHeight: " + str(newHeight)
-        pilConverted = pilConverted.resize([newWidth, newHeight], Image.ANTIALIAS)
-	extraHeight = screenHeight - newHeight;
-	extraWidth  = screenWidth - newWidth;
 
-        pilString = pilConverted.tostring()
+        if (self.verbose()):
+            print "ratio: " + str(ratio)
+            print "newWidth: " + str(newWidth)
+            print "newHeight: " + str(newHeight)
+
+        return pilConverted.resize([newWidth, newHeight], Image.ANTIALIAS)
+        
+
+    def display(self,image):
+        image = self.prepareImage(image)
+
+        pilString = image.tostring()
         pygameImage = pygame.image.fromstring(pilString,
-                                              pilConverted.size,
+                                              image.size,
                                               'RGB')
-        # pygameImage = pygame.transform.scale(pygameImage,(width,height))
-	self.myDisplay.fill((0, 0, 0))
+        self.myDisplay.fill((0, 0, 0))
+
+        scaledWidth, scaledHeight = image.size
+
+        extraHeight = self.screenHeight - scaledHeight;
+        extraWidth  = self.screenWidth - scaledWidth;
+
         self.myDisplay.blit(pygameImage, (extraWidth/2, extraHeight/2))
 
         pygame.display.update()

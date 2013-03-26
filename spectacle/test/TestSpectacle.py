@@ -12,7 +12,7 @@ class SimpleTestCase(unittest.TestCase):
 
     def setUp(self):
         """Call before every test case."""
-        self.spectacle = Spectacle()
+        self.spectacle = Spectacle(False, testConfig)
 #        self.foo = Foo()
 #        self.file = open( "blah", "r" )
 
@@ -24,12 +24,3 @@ class SimpleTestCase(unittest.TestCase):
         """testSetDir. note that all test method names must begin with 'test.'"""
         self.spectacle.setDirectory("foo")
         assert self.spectacle.directory() == "foo", "Directory didn't get set correctly"
-#        assert foo.bar() == 543, "bar() not calculating values correctly"
-
-#    def testB(self):
-#        """test case B"""
-#        assert foo+foo == 34, "can't add Foo instances"
-#
-#    def testC(self):
-#        """test case C"""
-#        assert foo.baz() == "blah", "baz() not returning blah correctly"
