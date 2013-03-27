@@ -1,0 +1,7 @@
+Spectacle is a slideshow viewer for Raspberry Pi, written by Dale
+E. Martin.  It is released under the BSD open source license - see
+COPYRIGHT for more information.
+
+To grab the latest version from github, do the following:
+git pull git@github.com:yourname/Spectacle.git
+

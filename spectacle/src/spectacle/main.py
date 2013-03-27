@@ -27,20 +27,40 @@ class PictureDB(object):
         data = cur.fetchone()
     
         print "SQLite version: %s" % data
-        
 
-class DefaultCollection(Collection):
-    def __init__(self, config, verbose):
-        self.myConfig = config
+# A wrapper around the ConfigParser object
+class CollectionConfig(object):
+    def __init__(self, configParser, verbose):
         self.myVerbose = verbose
-        self.myPictureDirectories = config.get('Collection', 'PictureDirectories')
+        self.myPictureDirectories = configParser.get('Collection', 'PictureDirectories')
+        self.myDBDirectory = configParser.get('Collection', 'DBDirectory')
+
         if (self.myVerbose):
             print "self.myPictureDirectories: " + self.myPictureDirectories         
-        self.myDBDirectory = config.get('Collection', 'DBDirectory')
         if (self.myVerbose):
-            print "self.myDBDirectory: " + self.myDBDirectory         
+            print "self.myDBDirectory: " + self.myDBDirectory                  
+
+    def pictureDirectories(self):
+        if type(self.myPictureDirectories) is list:
+            return self.myPictureDirectories
+        else:
+            return [self.myPictureDirectories]
+
+    def verbose(self):
+        return self.myVerbose
+
+class DefaultCollection(Collection):
+    def __init__(self, collectionConfig, verbose):
+        self.myCollectionConfig = collectionConfig
+        self.myVerbose = verbose
         self.pictureList = []
         self.myIdx = -1
+
+    def collectionConfig(self):
+        return self.myCollectionConfig
+
+    def pictureDirectories(self):
+        return self.collectionConfig().pictureDirectories()
     
     def verbose(self):
         return self.myVerbose
@@ -49,12 +69,6 @@ class DefaultCollection(Collection):
         if (self.verbose()):
             print "adding: " + picture
         self.pictureList.append(picture)
-    
-    def pictureDirectories(self):
-        if type(self.myPictureDirectories) is list:
-            return self.myPictureDirectories
-        else:
-            return [self.myPictureDirectories]
 
     def scanPictures(self, pictureDirectories):
         for currentDir in pictureDirectories:
@@ -69,7 +83,6 @@ class DefaultCollection(Collection):
                 else:
                     if (self.verbose()):
                         print "nothing: " + entry
-
     def initDB(self):
         self.scanPictures(self.pictureDirectories())
         
@@ -88,17 +101,22 @@ class DefaultCollection(Collection):
 class Spectacle(object):
     def __init__(self, verbose, config):
         self.dir = ""
-        self.myConfig = config
         self.myVerbose = verbose
+        self.myConfig = config  # this is a ConfigParser object
+        self.myCollectionConfig = CollectionConfig(self.config(), self.verbose()) 
+
         
     def config(self):
         return self.myConfig
     
     def verbose(self):
         return self.myVerbose
-        
+    
+    def collectionConfig(self):
+        return self.myCollectionConfig
+    
     def doit(self):
-        self.myCollection = DefaultCollection(self.config(), self.verbose())
+        self.myCollection = DefaultCollection(self.collectionConfig(), self.verbose())
         self.myCollection.initDB();
         self.mySlideshowModel = SlideShowModel(self.myCollection)
         self.mySlideshowModel.addListener(DisplayListener(self.verbose()))
