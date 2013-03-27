@@ -101,7 +101,7 @@ class Spectacle(object):
         self.myCollection = DefaultCollection(self.config(), self.verbose())
         self.myCollection.initDB();
         self.mySlideshowModel = SlideShowModel(self.myCollection)
-        self.mySlideshowModel.addListener(DisplayListener())
+        self.mySlideshowModel.addListener(DisplayListener(self.verbose()))
         # self.myCollection = SimpleCollection(collectionConfig()) 
         self.mySlideshowModel.next()
         pygame.time.set_timer(pygame.USEREVENT + 1, 5000)
