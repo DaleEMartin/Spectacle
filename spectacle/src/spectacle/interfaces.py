@@ -8,8 +8,6 @@
 class SelectionPolicy(object):
     """This abstract class is responsible for defining the policy of the slide show.
     A simple policy, for example, could pick the next picture in a Collection."""
-    def __init__(self, aCollection):
-        self.myCollection = aCollection;
     
     def collection(self):
         return self.myCollection
@@ -19,7 +17,17 @@ class SelectionPolicy(object):
 
     def prev(self):
         raise NotImplementedError( "SelectionPolicy.prev() is not implemented" )
-        
+    
+class CollectionConfig(object):
+    """This abstract class is responsible for defines the interface of a CollectionConfig object."""
+    def pictureDirectories(self):
+        raise NotImplementedError( "CollectionConfig.pictureDirectories() is not implemented" )
+
+class DatabaseConfig(object):
+    """This abstract class is responsible for defines the interface of a DatabaseConfig object."""
+    def databasePath(self):
+        raise NotImplementedError("DatabaseConfig.databasePath() is not implemented")    
+
 class Collection(object):        
     """This abstract class is responsible for defining the interface of a Collection."""
 

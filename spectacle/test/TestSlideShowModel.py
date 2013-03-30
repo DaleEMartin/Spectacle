@@ -47,12 +47,19 @@ class TestCollection(Collection):
 class TestListener(SlideShowListener):
     def __init__(self):
         self.myCurrent = ""
+        self.myQuitCalled = False;
         
     def current(self):
         return self.myCurrent;
     
     def setCurrent(self, newCurrent):
         self.myCurrent = newCurrent;
+        
+    def quit(self):
+        self.myQuitCalled = True;
+
+    def quitCalled(self):
+        return self.myQuitCalled;
 
 class SlideShowTestCase(unittest.TestCase):
 
@@ -88,3 +95,7 @@ class SlideShowTestCase(unittest.TestCase):
         self.slideShowModel().next() # "2"
         self.assertEqual(self.slideShowModel().prev(), "1")
         self.assertEqual(self.listener().current(), "1")
+        
+    def testQuit(self):
+        self.slideShowModel().quit();
+        self.assertEqual(self.listener().quitCalled(), True)
