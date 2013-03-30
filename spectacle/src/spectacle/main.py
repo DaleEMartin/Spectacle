@@ -86,7 +86,7 @@ class DefaultCollection(Collection):
         return nextPic
 
     def prev(self):
-        if (self.myIdx - 1 > 0):
+        if (self.myIdx - 1 >= 0):
             self.myIdx = self.myIdx - 1
         else:
             self.myIdx = len(self.pictureList) - 1
@@ -252,9 +252,13 @@ class PygameController(object):
     def __init__(self, model):
         self.myModel = model
         PygameController.TIMER_EVENT = pygame.USEREVENT + 1
+        self.myState = "STARTING"
 
     def model(self):
         return self.myModel
+
+    def verbose(self):
+        return self.model().verbose()
     
     def processKeypress(self, key):
         if key == pygame.K_LEFT:
@@ -264,33 +268,72 @@ class PygameController(object):
         elif key == pygame.K_ESCAPE or key == pygame.K_q:
             self.model().quit()
     
-    def mainLoop(self):
-        self.model().next() # display the first picture
-        pygame.time.set_timer(PygameController.TIMER_EVENT, 5000)
-        i = 0;
-        while True:
-            event = pygame.event.wait()
-            if (event.type == PygameController.TIMER_EVENT):
-                print "pygame.USEREVENT"
+    def input(self):
+        event = pygame.event.wait()
+        if (event.type == PygameController.TIMER_EVENT or self.myState == "STARTING"):
+            if (self.verbose()):
+                print "TIMER_EVENT"
+            return "TIMER_EVENT"
+        elif (event.type == pygame.QUIT):
+            if (self.verbose()):
+                print "QUIT"
+            return "QUIT"
+        elif (event.type == pygame.KEYDOWN):
+            if event.key == pygame.K_LEFT:
+                return "PREV"
+                self.model().prev();
+            elif event.key == pygame.K_RIGHT:
+                return "NEXT"
                 self.model().next()
-                # If we took so long another USEREVENT posted
-                # we're going to clear it so that quit events
-                # can make it through
-                pygame.event.clear(PygameController.TIMER_EVENT)
-            elif (event.type == pygame.QUIT):
-                print "pygame.QUIT"
+            elif event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
+                return "QUIT"
                 self.model().quit()
-            elif (event.type == pygame.KEYDOWN):
-                print "pygame.KEYDOWN"
-                self.processKeypress(event.key)
-                # If the user pressed a key, clear any pending timer events
-                pygame.event.clear(PygameController.TIMER_EVENT)                
-            elif (i == 10):
-                print "i == 10"
-                pygame.quit()
-                sys.exit()
 
-            # i = i + 1
-            # pygame.time.wait(100)
+    
+    def mainLoop(self):
+        interactiveCount = 0
+        delayMillis = 5000
+        while True:
+            currentInput = self.input()
+            if (self.myState == "STARTING"):
+                self.model().next() # display the first picture
+                pygame.time.set_timer(PygameController.TIMER_EVENT, delayMillis)
+                self.myState = "DISPLAYING"
+            elif (self.myState ==  "DISPLAYING"):
+                if (currentInput == "TIMER_EVENT"):
+                    self.model().next()
+                    # If we took so long another TIMER_EVENT posted
+                    # we're going to clear it so that quit events
+                    # can make it through
+                    pygame.event.clear(PygameController.TIMER_EVENT)
+                elif (currentInput == "QUIT"):
+                    self.model().quit()
+                elif (currentInput == "NEXT"):
+                    self.model().next()
+                    self.myState = "INTERACTIVE"
+                    delayMillis = 20000
+                    pygame.time.set_timer(PygameController.TIMER_EVENT, 100)
+                elif (currentInput == "PREV"):
+                    self.model().prev()
+                    self.myState = "INTERACTIVE"
+                    delayMillis = 20000
+                    pygame.time.set_timer(PygameController.TIMER_EVENT, 100)
+            elif (self.myState == "INTERACTIVE"):
+                if (currentInput == "QUIT"):
+                    self.model().quit()                
+                elif (currentInput == "TIMER_EVENT"):
+                    interactiveCount = interactiveCount + 1
+                    if (interactiveCount == (delayMillis / 100)):
+                        self.myState = "DISPLAYING"
+                        delayMillis = 5000
+                        pygame.time.set_timer(PygameController.TIMER_EVENT, 5000)
+                elif (currentInput == "NEXT"):
+                    interactiveCount = 0
+                    self.model().next()
+                    pygame.event.clear(PygameController.TIMER_EVENT)
+                elif (currentInput == "PREV"):
+                    interactiveCount = 0
+                    self.model().prev()
+                    pygame.event.clear(PygameController.TIMER_EVENT)
         
     
