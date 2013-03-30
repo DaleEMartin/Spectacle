@@ -8,28 +8,15 @@
 import Image
 import os
 import pygame
-import sqlite3 as lite
 import sys
 # import time
 
 from spectacle.interfaces import SlideShowListener
 from spectacle.interfaces import Collection
-
-class PictureDB(object):
-    def __init__(self, dbDir, verbose):
-        self.myDBDir = dbDir
-        self.myVerbose = verbose
-            
-    def initDB(self):
-        con = lite.connect('test.db')
-        cur = con.cursor()    
-        cur.execute('SELECT SQLITE_VERSION()')
-        data = cur.fetchone()
-    
-        print "SQLite version: %s" % data
+from spectacle.interfaces import CollectionConfig
 
 # A wrapper around the ConfigParser object
-class CollectionConfig(object):
+class DefaultCollectionConfig(CollectionConfig):
     def __init__(self, configParser, verbose):
         self.myVerbose = verbose
         self.myPictureDirectories = configParser.get('Collection', 'PictureDirectories')
@@ -98,13 +85,27 @@ class DefaultCollection(Collection):
 
         return nextPic
 
+    def prev(self):
+        if (self.myIdx - 1 > 0):
+            self.myIdx = self.myIdx - 1
+        else:
+            self.myIdx = len(self.pictureList) - 1
+
+        nextPic = self.pictureList[self.myIdx]
+        if self.verbose():
+            print "prevPic: " + nextPic
+
+        return nextPic
+
 class Spectacle(object):
     def __init__(self, verbose, config):
         self.dir = ""
         self.myVerbose = verbose
         self.myConfig = config  # this is a ConfigParser object
-        self.myCollectionConfig = CollectionConfig(self.config(), self.verbose()) 
-
+        self.myCollectionConfig = DefaultCollectionConfig(self.config(), self.verbose()) 
+        self.myCollection = None
+        self.mySlideShowModel = None
+        self.mySlideShowView = None
         
     def config(self):
         return self.myConfig
@@ -115,39 +116,27 @@ class Spectacle(object):
     def collectionConfig(self):
         return self.myCollectionConfig
     
+    def collection(self):
+        return self.myCollection
+    
+    def model(self):
+        return self.mySlideshowModel
+    
+    def view(self):
+        return self.mySlideShowView
+    
+    def controller(self):
+        return self.mySlideShowController
+    
     def doit(self):
         self.myCollection = DefaultCollection(self.collectionConfig(), self.verbose())
         self.myCollection.initDB();
-        self.mySlideshowModel = SlideShowModel(self.myCollection)
-        self.mySlideshowModel.addListener(DisplayListener(self.verbose()))
+        self.mySlideshowModel = SlideShowModel(self)
+        self.mySlideShowView = PygameView(self.model())
+        self.model().addListener(self.view())
+        self.mySlideShowController = PygameController(self.model())
+        self.controller().mainLoop()
         # self.myCollection = SimpleCollection(collectionConfig()) 
-        self.mySlideshowModel.next()
-        pygame.time.set_timer(pygame.USEREVENT + 1, 5000)
-        i = 0;
-        while True:
-            event = pygame.event.wait()
-            if (event.type == pygame.USEREVENT + 1):
-                print "pygame.USEREVENT"
-                self.mySlideshowModel.next()
-                # If we took so long another USEREVENT posted
-                # we're going to clear it so that quit events
-                # can make it through
-                pygame.event.clear(pygame.USEREVENT + 1)
-            elif (event.type == pygame.QUIT):
-                print "pygame.QUIT"
-                pygame.quit()
-                sys.exit()
-            elif (event.type == pygame.KEYDOWN):
-                print "pygame.KEYDOWN"
-                pygame.quit()
-                sys.exit()
-            elif (i == 10):
-                print "i == 10"
-                pygame.quit()
-                sys.exit()
-
-            # i = i + 1
-            # pygame.time.wait(100)
         
     def directory(self):
         return self.dir  
@@ -156,13 +145,19 @@ class Spectacle(object):
         self.dir = newDirectory
         
 class SlideShowModel(object):
-    def __init__(self, aCollection):
-        self.myCollection = aCollection
+    def __init__(self, spectacle):
         self.listeners = list()
         self.myCurrent = ""
+        self.mySpectacle = spectacle
     
     def collection(self):
-        return self.myCollection
+        return self.spectacle().collection()
+
+    def spectacle(self):
+        return self.mySpectacle
+    
+    def verbose(self):
+        return self.spectacle().verbose()
     
     def addListener(self, aListener):
         self.listeners.append(aListener)
@@ -182,15 +177,23 @@ class SlideShowModel(object):
     def current(self):
         return self.myCurrent
 
-class DisplayListener(SlideShowListener):
+    def quit(self):
+        for listener in self.listeners:
+            listener.quit()
+        sys.exit()
+
+class PygameView(SlideShowListener):
     """This abstract class is responsible for defining the interface of a SlideShowListener."""
-    def __init__(self, verbose):
-        self.initDisplay()
+    def __init__(self, model):
+        self.myModel = model;
         self.myCurrent = ""
-        self.myVerbose = verbose
+        self.initDisplay()
+    
+    def model(self):
+        return self.myModel
         
     def verbose(self):
-        return self.myVerbose;
+        return self.model().verbose()
         
     def initDisplay(self):
         pygame.init()
@@ -224,7 +227,6 @@ class DisplayListener(SlideShowListener):
 
         return pilConverted.resize([newWidth, newHeight], Image.ANTIALIAS)
         
-
     def display(self,image):
         image = self.prepareImage(image)
 
@@ -242,3 +244,53 @@ class DisplayListener(SlideShowListener):
         self.myDisplay.blit(pygameImage, (extraWidth/2, extraHeight/2))
 
         pygame.display.update()
+
+    def quit(self):
+        pygame.quit()
+
+class PygameController(object):
+    def __init__(self, model):
+        self.myModel = model
+        PygameController.TIMER_EVENT = pygame.USEREVENT + 1
+
+    def model(self):
+        return self.myModel
+    
+    def processKeypress(self, key):
+        if key == pygame.K_LEFT:
+            self.model().prev();
+        elif key == pygame.K_RIGHT:
+            self.model().next()
+        elif key == pygame.K_ESCAPE or key == pygame.K_q:
+            self.model().quit()
+    
+    def mainLoop(self):
+        self.model().next() # display the first picture
+        pygame.time.set_timer(PygameController.TIMER_EVENT, 5000)
+        i = 0;
+        while True:
+            event = pygame.event.wait()
+            if (event.type == PygameController.TIMER_EVENT):
+                print "pygame.USEREVENT"
+                self.model().next()
+                # If we took so long another USEREVENT posted
+                # we're going to clear it so that quit events
+                # can make it through
+                pygame.event.clear(PygameController.TIMER_EVENT)
+            elif (event.type == pygame.QUIT):
+                print "pygame.QUIT"
+                self.model().quit()
+            elif (event.type == pygame.KEYDOWN):
+                print "pygame.KEYDOWN"
+                self.processKeypress(event.key)
+                # If the user pressed a key, clear any pending timer events
+                pygame.event.clear(PygameController.TIMER_EVENT)                
+            elif (i == 10):
+                print "i == 10"
+                pygame.quit()
+                sys.exit()
+
+            # i = i + 1
+            # pygame.time.wait(100)
+        
+    
