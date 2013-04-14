@@ -9,11 +9,15 @@ import Image
 import os
 import pygame
 import sys
+import re
 # import time
 
 from spectacle.interfaces import SlideShowListener
 from spectacle.interfaces import Collection
 from spectacle.interfaces import CollectionConfig
+from spectacle.interfaces import DisplayConfig
+
+
 
 # A wrapper around the ConfigParser object
 class DefaultCollectionConfig(CollectionConfig):
@@ -65,7 +69,7 @@ class DefaultCollection(Collection):
                     if (self.verbose()):
                         print "dir: " + entry
                     self.scanPictures(entry)
-                elif entry.endswith('.jpg'):
+                elif entry.lower().endswith('.jpg'):
                     self.addPic(currentDir + "/" + entry)
                 else:
                     if (self.verbose()):
@@ -81,10 +85,23 @@ class DefaultCollection(Collection):
 
         nextPic = self.pictureList[self.myIdx]
         if self.verbose():
-            print "nextPic: " + nextPic
+            print "moving to: " + nextPic
 
         return nextPic
 
+    def peekNext(self):
+        idx = self.myIdx
+        if (idx + 1 < len(self.pictureList)):
+            idx = idx + 1
+        else:
+            idx = 0
+            
+        nextPic = self.pictureList[idx]
+        if self.verbose():
+            print "peeking at: " + nextPic
+
+        return nextPic
+ 
     def prev(self):
         if (self.myIdx - 1 >= 0):
             self.myIdx = self.myIdx - 1
@@ -98,23 +115,29 @@ class DefaultCollection(Collection):
         return nextPic
 
 class Spectacle(object):
-    def __init__(self, verbose, config):
+    @classmethod
+    def constructWithConfig(cls, verbose, config):
+        collectionConfig =  DefaultCollectionConfig(config, verbose)
+        displayConfig = PygameDisplayConfig(config, verbose) 
+        return cls(verbose, collectionConfig, displayConfig)
+    
+    def __init__(self, verbose, collectionConfig, displayConfig):
         self.dir = ""
         self.myVerbose = verbose
-        self.myConfig = config  # this is a ConfigParser object
-        self.myCollectionConfig = DefaultCollectionConfig(self.config(), self.verbose()) 
+        self.myCollectionConfig = collectionConfig
+        self.myDisplayConfig = displayConfig
         self.myCollection = None
         self.mySlideShowModel = None
         self.mySlideShowView = None
         
-    def config(self):
-        return self.myConfig
-    
     def verbose(self):
         return self.myVerbose
     
     def collectionConfig(self):
         return self.myCollectionConfig
+    
+    def displayConfig(self):
+        return self.myDisplayConfig
     
     def collection(self):
         return self.myCollection
@@ -132,14 +155,14 @@ class Spectacle(object):
         self.myCollection = DefaultCollection(self.collectionConfig(), self.verbose())
         self.myCollection.initDB();
         self.mySlideshowModel = SlideShowModel(self)
-        self.mySlideShowView = PygameView(self.model())
+        self.mySlideShowView = PygameDisplay(self.model(), self.displayConfig())
         self.model().addListener(self.view())
         self.mySlideShowController = PygameController(self.model())
         self.controller().mainLoop()
         # self.myCollection = SimpleCollection(collectionConfig()) 
         
     def directory(self):
-        return self.dir  
+        return self.dir
 
     def setDirectory(self, newDirectory):
         self.dir = newDirectory
@@ -163,13 +186,14 @@ class SlideShowModel(object):
         self.listeners.append(aListener)
     
     def next(self):
-        self.myCurrent = self.collection().iter().next()
+        self.myCurrent = self.collection().next()
         for listener in self.listeners:
-            listener.setCurrent(self.myCurrent)
+            listener.setCurrent(self.current())
+            listener.setNext(self.collection().peekNext())            
         return self.myCurrent
     
     def prev(self):
-        self.myCurrent = self.collection().iter().prev()
+        self.myCurrent = self.collection().prev()
         for listener in self.listeners:
             listener.setCurrent(self.myCurrent)
         return self.myCurrent
@@ -182,40 +206,115 @@ class SlideShowModel(object):
             listener.quit()
         sys.exit()
 
-class PygameView(SlideShowListener):
-    """This abstract class is responsible for defining the interface of a SlideShowListener."""
-    def __init__(self, model):
-        self.myModel = model;
-        self.myCurrent = ""
-        self.initDisplay()
+class PygameDisplayConfig(DisplayConfig):
+    def __init__(self, configParser, verbose):
+        self.myCacheDirectory = configParser.get('Display', 'CacheDirectory')
+        self.myVerbose = verbose
+        self.myScreenWidth = None 
+        self.myScreenHeight = None 
+        
+    def verbose(self):
+        return self.myVerbose
+
+    def setScreenWidth(self, screenWidth):
+        self.myScreenWidth = screenWidth
+
+    def setScreenHeight(self, screenHeight):
+        self.myScreenHeight = screenHeight
+
+    def screenWidth(self):
+        return self.myScreenWidth
+    
+    def screenHeight(self):
+        return self.myScreenHeight
+
+    def cacheDir(self):
+        return self.myCacheDirectory
+
+class PhotoCache(object):
+    def __init__(self, model, displayConfig):
+        self.myModel = model
+        self.myDisplayConfig = displayConfig
+        self.myDictionary = dict()
+        self.initCacheDir()
+    
+    def initCacheDir(self):
+        if not os.path.exists(self.cacheDir()):
+            os.makedirs(self.cacheDir())
+        else:
+            dirListing = os.listdir(self.cacheDir())
+            for entry in dirListing:
+                print "entry: " + entry
+                if os.path.isfile(entry) and entry.lower().endswith('.jpg'): 
+                    if (self.verbose()):
+                        print "dir: " + entry
+                    key = self.cacheName(entry)
+                    print "key: " + key
+                    self.myDictionary[key] = True
     
     def model(self):
         return self.myModel
-        
+    
+    def displayConfig(self):
+        return self.myDisplayConfig
+    
+    def cacheDir(self):
+        return self.displayConfig().cacheDir()
+
+    def screenWidth(self):
+        return self.displayConfig().screenWidth()
+
+    def screenHeight(self):
+        return self.displayConfig().screenHeight()
+
     def verbose(self):
         return self.model().verbose()
-        
-    def initDisplay(self):
-        pygame.init()
-        displayInfo = pygame.display.Info();
-        self.screenWidth = displayInfo.current_w;
-        self.screenHeight = displayInfo.current_h;
-        self.myDisplay = pygame.display.set_mode((self.screenWidth, self.screenHeight), pygame.FULLSCREEN)
-        pygame.mouse.set_visible(0)        
-        
-    def current(self):
-        return self.myCurrent
-    
-    def setCurrent(self, newCurrent):
-        self.myCurrent = newCurrent
-        self.display(newCurrent)
 
-    def prepareImage(self, image):
+    def sanitizeString(self, toSanitize):
+        extension = re.search(r'([.](jpg|png|gif)$)', toSanitize, re.I|re.M)
+        if extension:
+            extension = extension.group(0)
+            baseName = toSanitize.replace(extension, "")
+        else:
+            extension = ''
+            baseName = toSanitize
+
+        leadingSlashes = re.search(r'^([/]+)', baseName, re.M);
+        if leadingSlashes:
+            baseName = re.sub(r'^([/]+)', '', baseName)
+            leadingSlashes = '/'
+        else:
+            leadingSlashes = ''
+
+        parts = baseName.split("/")
+        nonEmpty = list()
+        for part in parts:
+            if part:
+                part = re.sub(r'[^\w.]', "_", part)
+                nonEmpty.append(part)
+
+        newString = nonEmpty[0]
+        finalIdx = len(nonEmpty)
+
+        for part in nonEmpty[1:finalIdx]:
+            newString = newString + "/" + part
+       
+        retval = leadingSlashes + newString + extension.lower()
+        
+        return retval 
+
+    def cacheName(self, origName):
+        print "origName = " + origName
+        newName = self.sanitizeString(self.cacheDir()) + "/" + self.sanitizeString(origName)
+        print "newName = " + newName
+        return newName
+
+    def convertAndSave(self, image):
         pilImage = Image.open(image)
         pilConverted = pilImage.convert('RGB')
 
         width, height = pilConverted.size
-        ratio = min(self.screenWidth/float(width), self.screenHeight/float(height))
+        ratio = min(self.screenWidth()/float(width), self.screenHeight()/float(height))
         
         newWidth = int(ratio * width)
         newHeight = int(ratio * height)
@@ -225,11 +324,94 @@ class PygameView(SlideShowListener):
             print "newWidth: " + str(newWidth)
             print "newHeight: " + str(newHeight)
 
-        return pilConverted.resize([newWidth, newHeight], Image.ANTIALIAS)
+        newImage = pilConverted.resize([newWidth, newHeight], Image.ANTIALIAS)
+        name = self.cacheName(image)
+        dirname = os.path.dirname(name)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        if (self.verbose()):
+            print "Saving image: " + name
+        newImage.save(name)
+        self.myDictionary[name] = True
+    
+    def contains(self, image):
+        path = self.cacheName(image)
+        return os.path.exists(path)
+    
+    def fetch(self, image):
+        retval = None
+        try:
+            retval = Image.open(self.cacheName(image))
+        except (RuntimeError):
+            pass
+        return retval
+
+    def prepareImage(self, image):
+        if self.contains(image):
+            if (self.verbose):
+                print "Already have: " + image
+        else:
+            if (self.verbose):
+                print "Do not have: " + image
+            self.convertAndSave(image)
+        return self.fetch(image)
+
+class PygameDisplay(SlideShowListener):
+    """This abstract class is responsible for defining the interface of a SlideShowListener."""
+    def __init__(self, model, displayConfig):
+        self.myModel = model;
+        self.myCurrent = ""
+        self.myCache = None
+        self.myDisplayConfig = displayConfig
+        self.initDisplay()
+        self.myNextPhoto = None
+    
+    def nextPhoto(self):
+        return self.myNextPhoto
+    
+    def setNextPhoto(self, nextPhoto):
+        self.myNextPhoto= nextPhoto
+    
+    def model(self):
+        return self.myModel
+        
+    def verbose(self):
+        return self.model().verbose()
+        
+    def displayConfig(self):
+        return self.myDisplayConfig
+
+    def screenWidth(self):
+        return self.displayConfig().screenWidth()
+
+    def screenHeight(self):
+        return self.displayConfig().screenHeight()
+    
+    def cache(self):
+        return self.myCache
+    
+    def initDisplay(self):
+        self.myCache = PhotoCache(self.model(), self.displayConfig())
+        pygame.init()
+        displayInfo = pygame.display.Info();
+        
+        self.displayConfig().setScreenWidth(displayInfo.current_w)
+        self.displayConfig().setScreenHeight(displayInfo.current_h)
+
+        self.myDisplay = pygame.display.set_mode((self.screenWidth(), self.screenHeight()), pygame.FULLSCREEN)
+        pygame.mouse.set_visible(0)        
+        
+    def current(self):
+        return self.myCurrent
+    
+    def setCurrent(self, newCurrent):
+        self.myCurrent = newCurrent
+        self.display(newCurrent)
         
     def display(self,image):
-        image = self.prepareImage(image)
-
+        image = self.cache().prepareImage(image)
+        
         pilString = image.tostring()
         pygameImage = pygame.image.fromstring(pilString,
                                               image.size,
@@ -238,12 +420,15 @@ class PygameView(SlideShowListener):
 
         scaledWidth, scaledHeight = image.size
 
-        extraHeight = self.screenHeight - scaledHeight;
-        extraWidth  = self.screenWidth - scaledWidth;
+        extraHeight = self.screenHeight() - scaledHeight;
+        extraWidth  = self.screenWidth() - scaledWidth;
 
         self.myDisplay.blit(pygameImage, (extraWidth/2, extraHeight/2))
 
         pygame.display.update()
+
+    def setNext(self, nextPic):
+        pass
 
     def quit(self):
         pygame.quit()

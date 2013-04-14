@@ -34,7 +34,7 @@ def main(argv=None):
                         help='configuration to use', required=True)
     args = parser.parse_args()
 
-    spectacle = Spectacle(args.verbose, readConfig(args.config))
+    spectacle = Spectacle.constructWithConfig(args.verbose, readConfig(args.config))
     spectacle.doit()
 
 #    if argv is None:

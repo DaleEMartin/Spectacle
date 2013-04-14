@@ -7,10 +7,19 @@
 
 import unittest
 from spectacle.interfaces import Collection
+from spectacle.interfaces import CollectionConfig
+from spectacle.interfaces import DisplayConfig
 from spectacle.interfaces import SlideShowListener
 from spectacle.main import SlideShowModel
+from spectacle.main import Spectacle
 
-class TestCollection(Collection):
+class MockCollectionConfig(CollectionConfig):
+    pass
+
+class MockDisplayConfig(DisplayConfig):
+    pass
+
+class MockCollection(Collection):
     def __init__(self):
         self.myPics = list()
         self.pics().append("1")
@@ -31,10 +40,10 @@ class TestCollection(Collection):
         return self.pics()[index]
 
     def next(self):
-        if self.index() + 1 >= self.num():
+        if self.peekNext() < self.index():
             raise StopIteration
         else:
-            self.myIndex = self.index() + 1
+            self.myIndex = self.peekNext();
         return self.get(self.index())
 
     def prev(self):
@@ -44,7 +53,16 @@ class TestCollection(Collection):
             self.myIndex = self.index() - 1
         return self.get(self.index())
 
-class TestListener(SlideShowListener):
+    def peekNext(self):
+        if self.index() + 1 >= self.num():
+            return 0
+        else:
+            return self.index() + 1
+
+    def collection(self):
+        return self
+
+class MockListener(SlideShowListener):
     def __init__(self):
         self.myCurrent = ""
         self.myQuitCalled = False;
@@ -54,6 +72,9 @@ class TestListener(SlideShowListener):
     
     def setCurrent(self, newCurrent):
         self.myCurrent = newCurrent;
+
+    def setNext(self, newNext):
+        pass
         
     def quit(self):
         self.myQuitCalled = True;
@@ -64,9 +85,10 @@ class TestListener(SlideShowListener):
 class SlideShowTestCase(unittest.TestCase):
 
     def setUp(self):
-        collection = TestCollection()
+        spectacle = Spectacle(True, MockCollectionConfig(), MockDisplayConfig())
+        collection = MockCollection()
         model = SlideShowModel(collection)
-        self.myListener = TestListener()
+        self.myListener = MockListener()
         model.addListener(self.myListener)
         self.myModel = model        
 
@@ -97,5 +119,11 @@ class SlideShowTestCase(unittest.TestCase):
         self.assertEqual(self.listener().current(), "1")
         
     def testQuit(self):
-        self.slideShowModel().quit();
+        systemExitCalled = False
+        try:
+            self.slideShowModel().quit();            
+        except SystemExit:
+            systemExitCalled = True
         self.assertEqual(self.listener().quitCalled(), True)
+        self.assertEqual(systemExitCalled, True)
+        

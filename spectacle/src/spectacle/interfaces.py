@@ -17,7 +17,7 @@ class SelectionPolicy(object):
 
     def prev(self):
         raise NotImplementedError( "SelectionPolicy.prev() is not implemented" )
-    
+
 class CollectionConfig(object):
     """This abstract class is responsible for defines the interface of a CollectionConfig object."""
     def pictureDirectories(self):
@@ -28,6 +28,11 @@ class DatabaseConfig(object):
     def databasePath(self):
         raise NotImplementedError("DatabaseConfig.databasePath() is not implemented")    
 
+class DisplayConfig(object):
+    """This abstract class is responsible for defines the interface of a DisplayConfig object."""
+    def cacheDirectory(self):
+        raise NotImplementedError( "DisplayConfig.cacheDirectory() is not implemented" )
+    
 class Collection(object):        
     """This abstract class is responsible for defining the interface of a Collection."""
 
@@ -46,6 +51,9 @@ class Collection(object):
     def prev(self):
         raise NotImplementedError( "Collection.prev() is not implemented" )      
 
+    def peekNext(self):
+        raise NotImplementedError( "Collection.peekNext() is not implemented" )        
+
 class SlideShowListener(object):        
     """This abstract class is responsible for defining the interface of a SlideShowListener."""
     def __init__(self):
@@ -56,3 +64,7 @@ class SlideShowListener(object):
     
     def setCurrent(self, newCurrent):
         raise NotImplementedError( "SlideShowListener.setCurrent() not implemented" )
+    
+    def setNext(self, next):
+        raise NotImplementedError( "SlideShowListener.setNext() not implemented" )
+        

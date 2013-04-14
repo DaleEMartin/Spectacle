@@ -7,12 +7,22 @@
 
 import unittest
 from spectacle.main import Spectacle
+from spectacle.interfaces import CollectionConfig
+from spectacle.interfaces import DisplayConfig
+
+class MockCollectionConfig(CollectionConfig):
+    pass
+
+class MockDisplayConfig(DisplayConfig):
+    pass
 
 class SimpleTestCase(unittest.TestCase):
 
     def setUp(self):
         """Call before every test case."""
-        self.spectacle = Spectacle(False, testConfig)
+        mockCollectionConfig = MockCollectionConfig()
+        mockDisplayConfig = MockDisplayConfig()
+        self.spectacle = Spectacle(False, mockCollectionConfig, mockDisplayConfig)
 #        self.foo = Foo()
 #        self.file = open( "blah", "r" )
 
