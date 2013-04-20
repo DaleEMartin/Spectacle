@@ -7,18 +7,18 @@
 
 import unittest
 import time
-from spectacle.main import DisplayListener
+from spectacle.main import PygameDisplayConfig
 
-class TestCollection(unittest.TestCase):
+
+class TestDisplayConfig(unittest.TestCase):
     def setUp(self):
         """Call before every test case."""
-        self.myDisplayListener = DisplayListener(True) # Verbose
+        pass
 
     def tearDown(self):
         """Call after every test case."""
-#        self.file.close()
+        pass
 
-    def testSetCurrent(self):
-        self.myDisplayListener.setCurrent('pics1/air.jpg')
-        time.sleep(2)
-        # Should now ask if the right picture displayed
+    def testReadConfig1(self):
+        """testSetDir. note that all test method names must begin with 'test.'"""
+        self.assertEquals(False, True)

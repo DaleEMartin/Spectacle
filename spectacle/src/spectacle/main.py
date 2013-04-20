@@ -118,7 +118,7 @@ class Spectacle(object):
     @classmethod
     def constructWithConfig(cls, verbose, config):
         collectionConfig =  DefaultCollectionConfig(config, verbose)
-        displayConfig = PygameDisplayConfig(config, verbose) 
+        displayConfig = PygameDisplayConfig.constructWithConfig(verbose, config) 
         return cls(verbose, collectionConfig, displayConfig)
     
     def __init__(self, verbose, collectionConfig, displayConfig):
@@ -207,11 +207,17 @@ class SlideShowModel(object):
         sys.exit()
 
 class PygameDisplayConfig(DisplayConfig):
-    def __init__(self, configParser, verbose):
-        self.myCacheDirectory = configParser.get('Display', 'CacheDirectory')
+    """Requires the verbose"""
+    def __init__(self, verbose, cacheDirectory):
         self.myVerbose = verbose
-        self.myScreenWidth = None 
-        self.myScreenHeight = None 
+        self.myCacheDirectory = cacheDirectory
+        self.myScreenHeight = None
+        self.myScreenWidth = None
+
+    @classmethod
+    def constructWithConfig(cls, verbose, configParser):
+        cacheDirectory = configParser.get('Display', 'CacheDirectory')
+        return cls(verbose, cacheDirectory)
         
     def verbose(self):
         return self.myVerbose
