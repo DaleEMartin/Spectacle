@@ -13,7 +13,7 @@ class MockDisplayConfig(DisplayConfig):
     def __init__(self, cacheDir):
         self.myCacheDir = cacheDir
         
-    def cacheDir(self):
+    def cacheDirectory(self):
         return self.myCacheDir
 
 class MockModel(object):

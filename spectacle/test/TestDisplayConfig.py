@@ -8,17 +8,19 @@
 import unittest
 import time
 from spectacle.main import PygameDisplayConfig
-
+import ConfigParser
 
 class TestDisplayConfig(unittest.TestCase):
     def setUp(self):
-        """Call before every test case."""
         pass
 
     def tearDown(self):
-        """Call after every test case."""
         pass
 
     def testReadConfig1(self):
-        """testSetDir. note that all test method names must begin with 'test.'"""
-        self.assertEquals(False, True)
+        configParser = ConfigParser.ConfigParser()
+        configParser.read('mockConfigDir/testDisplayConfig1.cfg')
+        displayConfig = PygameDisplayConfig.constructWithConfig(True, configParser)
+        self.assertEquals(displayConfig.cacheDirectory(), 'mockCacheDirectory')
+        self.assertEquals(displayConfig.displayOnCommand(), 'mockDisplayOnCommand')
+        self.assertEquals(displayConfig.displayOffCommand(), 'mockDisplayOffCommand')

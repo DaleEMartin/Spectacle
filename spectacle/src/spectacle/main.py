@@ -208,16 +208,29 @@ class SlideShowModel(object):
 
 class PygameDisplayConfig(DisplayConfig):
     """Requires the verbose"""
-    def __init__(self, verbose, cacheDirectory):
+    def __init__(self, verbose, cacheDirectory, displayOnCommand, displayOffCommand):
         self.myVerbose = verbose
         self.myCacheDirectory = cacheDirectory
+        self.myDisplayOnCommand = displayOnCommand
+        self.myDisplayOffCommand = displayOffCommand
         self.myScreenHeight = None
         self.myScreenWidth = None
 
     @classmethod
     def constructWithConfig(cls, verbose, configParser):
         cacheDirectory = configParser.get('Display', 'CacheDirectory')
-        return cls(verbose, cacheDirectory)
+        displayOnCommand = configParser.get('Display', 'DisplayOnCommand')
+        displayOffCommand = configParser.get('Display', 'DisplayOffCommand')
+        return cls(verbose, cacheDirectory, displayOnCommand, displayOffCommand)
+
+    def cacheDirectory(self):
+        return self.myCacheDirectory
+    
+    def displayOnCommand(self):
+        return self.myDisplayOnCommand
+
+    def displayOffCommand(self):
+        return self.myDisplayOffCommand
         
     def verbose(self):
         return self.myVerbose
@@ -234,21 +247,18 @@ class PygameDisplayConfig(DisplayConfig):
     def screenHeight(self):
         return self.myScreenHeight
 
-    def cacheDir(self):
-        return self.myCacheDirectory
-
 class PhotoCache(object):
     def __init__(self, model, displayConfig):
         self.myModel = model
         self.myDisplayConfig = displayConfig
         self.myDictionary = dict()
-        self.initCacheDir()
+        self.initcacheDirectory()
     
-    def initCacheDir(self):
-        if not os.path.exists(self.cacheDir()):
-            os.makedirs(self.cacheDir())
+    def initcacheDirectory(self):
+        if not os.path.exists(self.cacheDirectory()):
+            os.makedirs(self.cacheDirectory())
         else:
-            dirListing = os.listdir(self.cacheDir())
+            dirListing = os.listdir(self.cacheDirectory())
             for entry in dirListing:
                 print "entry: " + entry
                 if os.path.isfile(entry) and entry.lower().endswith('.jpg'): 
@@ -264,8 +274,8 @@ class PhotoCache(object):
     def displayConfig(self):
         return self.myDisplayConfig
     
-    def cacheDir(self):
-        return self.displayConfig().cacheDir()
+    def cacheDirectory(self):
+        return self.displayConfig().cacheDirectory()
 
     def screenWidth(self):
         return self.displayConfig().screenWidth()
@@ -311,7 +321,7 @@ class PhotoCache(object):
 
     def cacheName(self, origName):
         print "origName = " + origName
-        newName = self.sanitizeString(self.cacheDir()) + "/" + self.sanitizeString(origName)
+        newName = self.sanitizeString(self.cacheDirectory()) + "/" + self.sanitizeString(origName)
         print "newName = " + newName
         return newName
 

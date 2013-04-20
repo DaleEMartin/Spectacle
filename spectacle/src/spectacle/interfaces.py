@@ -33,6 +33,12 @@ class DisplayConfig(object):
     def cacheDirectory(self):
         raise NotImplementedError( "DisplayConfig.cacheDirectory() is not implemented" )
     
+    def displayOnCommand(self):
+        raise NotImplementedError( "DisplayConfig.displayOnCommand() is not implemented" )
+    
+    def displayOffCommand(self):
+        raise NotImplementedError( "DisplayConfig.displayOffCommand() is not implemented" )
+            
 class Collection(object):        
     """This abstract class is responsible for defining the interface of a Collection."""
 
