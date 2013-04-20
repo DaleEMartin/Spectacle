@@ -257,16 +257,6 @@ class PhotoCache(object):
     def initcacheDirectory(self):
         if not os.path.exists(self.cacheDirectory()):
             os.makedirs(self.cacheDirectory())
-        else:
-            dirListing = os.listdir(self.cacheDirectory())
-            for entry in dirListing:
-                print "entry: " + entry
-                if os.path.isfile(entry) and entry.lower().endswith('.jpg'): 
-                    if (self.verbose()):
-                        print "dir: " + entry
-                    key = self.cacheName(entry)
-                    print "key: " + key
-                    self.myDictionary[key] = True
     
     def model(self):
         return self.myModel
@@ -320,9 +310,7 @@ class PhotoCache(object):
         return retval 
 
     def cacheName(self, origName):
-        print "origName = " + origName
         newName = self.sanitizeString(self.cacheDirectory()) + "/" + self.sanitizeString(origName)
-        print "newName = " + newName
         return newName
 
     def convertAndSave(self, image):
@@ -426,6 +414,9 @@ class PygameDisplay(SlideShowListener):
         self.display(newCurrent)
         
     def display(self,image):
+        while (os.path.islink(image)):
+            image = os.readlink(image)
+
         image = self.cache().prepareImage(image)
         
         pilString = image.tostring()

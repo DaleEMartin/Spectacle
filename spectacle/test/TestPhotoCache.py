@@ -30,7 +30,7 @@ class TestPhotoCache(unittest.TestCase):
         return self.myPhotoCache
     
     def testCacheNameAbsolute(self):
-        self.myPhotoCache = makeCache("/tmp/mockCacheDir")
+        myPhotoCache = makeCache("/tmp/mockCacheDir")
 
         self.assertEquals(self.photoCache().cacheName('this is a test'),
                           '/tmp/mockCacheDir/this_is_a_test')
@@ -58,3 +58,4 @@ class TestPhotoCache(unittest.TestCase):
 
         self.assertEquals(self.photoCache().cacheName('this/is/a/test.PnG'),
                           'mockCacheDir/this/is/a/test.png')
+        
