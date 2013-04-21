@@ -416,23 +416,31 @@ class PygameDisplay(SlideShowListener):
     def display(self,image):
         while (os.path.islink(image)):
             image = os.readlink(image)
-
-        image = self.cache().prepareImage(image)
         
-        pilString = image.tostring()
-        pygameImage = pygame.image.fromstring(pilString,
-                                              image.size,
-                                              'RGB')
-        self.myDisplay.fill((0, 0, 0))
+        try:
+            image = self.cache().prepareImage(image)
+        
+            pilString = image.tostring()
+            pygameImage = pygame.image.fromstring(pilString,
+                                                  image.size,
+                                                  'RGB')
+            # Black out the screen to get rid of artifacts from the
+            # previous display
+            self.myDisplay.fill((0, 0, 0))
 
-        scaledWidth, scaledHeight = image.size
+            # Compute the area where we have the max height/width given our
+            # aspect ratio, and then split the empty part in half to center
+            # the image
+            scaledWidth, scaledHeight = image.size
+            extraHeight = self.screenHeight() - scaledHeight;
+            extraWidth  = self.screenWidth() - scaledWidth;
 
-        extraHeight = self.screenHeight() - scaledHeight;
-        extraWidth  = self.screenWidth() - scaledWidth;
+            self.myDisplay.blit(pygameImage, (extraWidth/2, extraHeight/2))
 
-        self.myDisplay.blit(pygameImage, (extraWidth/2, extraHeight/2))
-
-        pygame.display.update()
+            pygame.display.update()
+        except IOError:
+            if self.verbose():
+                print "Error displaying image:", sys.exc_info()[0]
 
     def setNext(self, nextPic):
         pass
