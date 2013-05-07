@@ -157,7 +157,7 @@ class Spectacle(object):
         self.mySlideshowModel = SlideShowModel(self)
         self.mySlideShowView = PygameDisplay(self.model(), self.displayConfig())
         self.model().addListener(self.view())
-        self.mySlideShowController = PygameController(self.model())
+        self.mySlideShowController = PygameController(self.model(), self.displayConfig())
         self.controller().mainLoop()
         # self.myCollection = SimpleCollection(collectionConfig()) 
         
@@ -206,6 +206,31 @@ class SlideShowModel(object):
             listener.quit()
         sys.exit()
 
+    def rotateCounterClockwise(self):
+        if self.verbose():
+            print "rotateCounterClockwise(" + self.current() + ")"
+        for listener in self.listeners:
+            listener.rotateCounterClockwise(self.current())
+    
+    def rotateClockwise(self):
+        if self.verbose():
+            print "rotateClockWise(" + self.current() + ")"
+        for listener in self.listeners:
+            listener.rotateClockwise(self.current())
+
+    def infreq(self):
+        if self.verbose():
+            print "infreq(" + self.current() + ")"
+        for listener in self.listeners:
+            listener.infreq(self.current())
+
+    def exclude(self):
+        if self.verbose():
+            print "exclude(" + self.current() + ")"
+        for listener in self.listeners:
+            listener.infreq(self.exclude())
+        
+
 class PygameDisplayConfig(DisplayConfig):
     """Requires the verbose"""
     def __init__(self, verbose, cacheDirectory, displayOnCommand, displayOffCommand):
@@ -215,6 +240,9 @@ class PygameDisplayConfig(DisplayConfig):
         self.myDisplayOffCommand = displayOffCommand
         self.myScreenHeight = None
         self.myScreenWidth = None
+        self.myAutoMillis = 5000
+        self.myInteractiveMillis = 20000
+        self.myTickMillis = 100
 
     @classmethod
     def constructWithConfig(cls, verbose, configParser):
@@ -246,6 +274,16 @@ class PygameDisplayConfig(DisplayConfig):
     
     def screenHeight(self):
         return self.myScreenHeight
+
+    def autoMillis(self):
+        return self.myAutoMillis
+
+    def interactiveMillis(self):
+        return self.myInteractiveMillis
+        
+    def tickMillis(self):
+        return self.myTickMillis
+
 
 class PhotoCache(object):
     def __init__(self, model, displayConfig):
@@ -405,7 +443,8 @@ class PygameDisplay(SlideShowListener):
 
         self.myDisplay = pygame.display.set_mode((self.screenWidth(), self.screenHeight()), pygame.FULLSCREEN)
         pygame.mouse.set_visible(0)        
-        
+        pygame.time.set_timer(PygameController.TIMER_EVENT, self.displayConfig().tickMillis())
+
     def current(self):
         return self.myCurrent
     
@@ -413,16 +452,16 @@ class PygameDisplay(SlideShowListener):
         self.myCurrent = newCurrent
         self.display(newCurrent)
         
-    def display(self,image):
-        while (os.path.islink(image)):
-            image = os.readlink(image)
+    def display(self,collectionPath):
+        while (os.path.islink(collectionPath)):
+            collectionPath = os.readlink(collectionPath)
         
         try:
-            image = self.cache().prepareImage(image)
+            cachePath = self.cache().prepareImage(collectionPath)
         
-            pilString = image.tostring()
+            pilString = cachePath.tostring()
             pygameImage = pygame.image.fromstring(pilString,
-                                                  image.size,
+                                                  cachePath.size,
                                                   'RGB')
             # Black out the screen to get rid of artifacts from the
             # previous display
@@ -430,8 +469,8 @@ class PygameDisplay(SlideShowListener):
 
             # Compute the area where we have the max height/width given our
             # aspect ratio, and then split the empty part in half to center
-            # the image
-            scaledWidth, scaledHeight = image.size
+            # the cachePath
+            scaledWidth, scaledHeight = cachePath.size
             extraHeight = self.screenHeight() - scaledHeight;
             extraWidth  = self.screenWidth() - scaledWidth;
 
@@ -440,33 +479,36 @@ class PygameDisplay(SlideShowListener):
             pygame.display.update()
         except IOError:
             if self.verbose():
-                print "Error displaying image:", sys.exc_info()[0]
+                print "Error displaying cachePath:", sys.exc_info()[0]
 
     def setNext(self, nextPic):
         pass
+
+    def rotateClockwise(self, toRotate):
+        print "PygameDisplay.rotateClockwise called"
+
+    def rotateCounterClockwise(self, toRotate):
+        print "PygameDisplay.rotateCounterClockwise called"
 
     def quit(self):
         pygame.quit()
 
 class PygameController(object):
-    def __init__(self, model):
+    TIMER_EVENT = pygame.USEREVENT + 1
+
+    def __init__(self, model, displayConfig):
         self.myModel = model
-        PygameController.TIMER_EVENT = pygame.USEREVENT + 1
         self.myState = "STARTING"
+        self.myDisplayConfig = displayConfig
 
     def model(self):
         return self.myModel
 
+    def displayConfig(self):
+        return self.myDisplayConfig
+
     def verbose(self):
         return self.model().verbose()
-    
-    def processKeypress(self, key):
-        if key == pygame.K_LEFT:
-            self.model().prev();
-        elif key == pygame.K_RIGHT:
-            self.model().next()
-        elif key == pygame.K_ESCAPE or key == pygame.K_q:
-            self.model().quit()
     
     def input(self):
         event = pygame.event.wait()
@@ -481,59 +523,75 @@ class PygameController(object):
         elif (event.type == pygame.KEYDOWN):
             if event.key == pygame.K_LEFT:
                 return "PREV"
-                self.model().prev();
             elif event.key == pygame.K_RIGHT:
                 return "NEXT"
-                self.model().next()
+            elif event.key == pygame.K_UP:
+                return "ROTATE_COUNTER"
+            elif event.key == pygame.K_DOWN:
+                return "ROTATE"
+            elif event.key == pygame.K_x:
+                return "EXCLUDE"
+            elif event.key == pygame.K_i:
+                return "INFREQ"
             elif event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
                 return "QUIT"
-                self.model().quit()
+
 
     
     def mainLoop(self):
-        interactiveCount = 0
-        delayMillis = 5000
+        clock = pygame.time.Clock()
+        lastEventTime = pygame.time.get_ticks()
+        lastState = self.myState
+        nextState = self.myState
         while True:
-            currentInput = self.input()
+            self.myState = nextState
+            currentTime = pygame.time.get_ticks()
+            readInput = True
+            if (self.myState == "INTERACTIVE" and lastState != "INTERACTIVE"):
+                readInput = False
+            
+            if (readInput == True):
+                currentInput = self.input()
+
             if (self.myState == "STARTING"):
                 self.model().next() # display the first picture
-                pygame.time.set_timer(PygameController.TIMER_EVENT, delayMillis)
-                self.myState = "DISPLAYING"
+                nextState = "DISPLAYING"
+                lastEventTime = pygame.time.get_ticks()
             elif (self.myState ==  "DISPLAYING"):
                 if (currentInput == "TIMER_EVENT"):
-                    self.model().next()
-                    # If we took so long another TIMER_EVENT posted
-                    # we're going to clear it so that quit events
-                    # can make it through
-                    pygame.event.clear(PygameController.TIMER_EVENT)
+                    print currentTime
+                    print lastEventTime
+                    print currentTime - lastEventTime
+                    if ((currentTime - lastEventTime) > self.displayConfig().autoMillis()):
+                        self.model().next()
+                        lastEventTime = pygame.time.get_ticks()
+                    # else just swallow it
                 elif (currentInput == "QUIT"):
                     self.model().quit()
-                elif (currentInput == "NEXT"):
-                    self.model().next()
-                    self.myState = "INTERACTIVE"
-                    delayMillis = 20000
-                    pygame.time.set_timer(PygameController.TIMER_EVENT, 100)
-                elif (currentInput == "PREV"):
-                    self.model().prev()
-                    self.myState = "INTERACTIVE"
-                    delayMillis = 20000
-                    pygame.time.set_timer(PygameController.TIMER_EVENT, 100)
+                else:
+                    nextState = "INTERACTIVE"
             elif (self.myState == "INTERACTIVE"):
-                if (currentInput == "QUIT"):
-                    self.model().quit()                
-                elif (currentInput == "TIMER_EVENT"):
-                    interactiveCount = interactiveCount + 1
-                    if (interactiveCount == (delayMillis / 100)):
-                        self.myState = "DISPLAYING"
-                        delayMillis = 5000
-                        pygame.time.set_timer(PygameController.TIMER_EVENT, 5000)
-                elif (currentInput == "NEXT"):
-                    interactiveCount = 0
-                    self.model().next()
-                    pygame.event.clear(PygameController.TIMER_EVENT)
-                elif (currentInput == "PREV"):
-                    interactiveCount = 0
-                    self.model().prev()
-                    pygame.event.clear(PygameController.TIMER_EVENT)
-        
+                if (currentInput == "TIMER_EVENT"):
+                    if (currentTime - lastEventTime > self.displayConfig().interactiveMillis()):
+                        nextState = "DISPLAYING"
+                else:
+                    lastEventTime = clock.get_rawtime()
+                    # Note the passage of time
+                    if (currentInput == "QUIT"):
+                        self.model().quit()
+                    elif (currentInput == "NEXT"):
+                        self.model().next()
+                        pygame.event.clear(PygameController.TIMER_EVENT)
+                    elif (currentInput == "PREV"):
+                        self.model().prev()
+                        pygame.event.clear(PygameController.TIMER_EVENT)
+                    elif (currentInput == "ROTATE_COUNTER"):
+                        self.model().rotateCounterClockwise()
+                    elif (currentInput == "ROTATE"):
+                        self.model().rotateClockwise()
+                    elif (currentInput == "EXCLUDE"):
+                        self.model().exclude()
+                    elif (currentInput == "INFREQ"):
+                        self.model().infreq()
+            lastState = self.myState
     

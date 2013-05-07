@@ -38,7 +38,17 @@ class DisplayConfig(object):
     
     def displayOffCommand(self):
         raise NotImplementedError( "DisplayConfig.displayOffCommand() is not implemented" )
-            
+
+    def tickMillis(self):
+        raise NotImplementedError( "DisplayConfig.tickMillis() is not implemented" )
+
+    def autoMillis(self):
+        raise NotImplementedError( "DisplayConfig.autoMillis() is not implemented" )
+
+    def interactiveMillis(self):
+        raise NotImplementedError( "DisplayConfig.interactiveMillis() is not implemented" )
+
+    
 class Collection(object):        
     """This abstract class is responsible for defining the interface of a Collection."""
 
