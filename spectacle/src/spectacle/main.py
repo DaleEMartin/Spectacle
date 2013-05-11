@@ -513,8 +513,6 @@ class PygameController(object):
     def input(self):
         event = pygame.event.wait()
         if (event.type == PygameController.TIMER_EVENT or self.myState == "STARTING"):
-            if (self.verbose()):
-                print "TIMER_EVENT"
             return "TIMER_EVENT"
         elif (event.type == pygame.QUIT):
             if (self.verbose()):
@@ -559,9 +557,6 @@ class PygameController(object):
                 lastEventTime = pygame.time.get_ticks()
             elif (self.myState ==  "DISPLAYING"):
                 if (currentInput == "TIMER_EVENT"):
-                    print currentTime
-                    print lastEventTime
-                    print currentTime - lastEventTime
                     if ((currentTime - lastEventTime) > self.displayConfig().autoMillis()):
                         self.model().next()
                         lastEventTime = pygame.time.get_ticks()
